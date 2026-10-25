@@ -118,6 +118,9 @@ def ensure_geo():
         log("   装好 Clash Verge 后重跑，或 set VK_GEO=<resources 目录>")
         return
 
+    # 全新克隆时 profiles\ 还不存在，不先建好 copy2 会报 WinError 3
+    (ROOT / "profiles").mkdir(parents=True, exist_ok=True)
+
     need = {"geoip.dat": "geoip.dat", "geosite.dat": "GeoSite.dat",
             "Country.mmdb": "Country.mmdb", "ASN.mmdb": "ASN.mmdb"}
     for s, d in need.items():
@@ -137,7 +140,9 @@ def main():
     src = pick_input()
     if not src:
         log("!! 没有可用的节点文件")
-        return
+        log("   先跑 python bin\\vk.py all 采集节点，或 python bin\\harvest.py")
+        # 返回非零，让 setup.bat / guard.py 能区分「真的生成了配置」和「没东西可生成」
+        return 1
     nodes = json.loads(src.read_text(encoding="utf-8"))
     log(f"载入 {src.name}: {len(nodes)} 节点")
 
@@ -484,4 +489,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)
