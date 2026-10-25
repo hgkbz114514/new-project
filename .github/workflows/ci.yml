@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  check:
+    # 项目是 Windows 专用的（PowerShell / cmd / .bat），所以跑在 windows 上
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 依赖
+        run: |
+          python -m pip install --quiet requests pyyaml
+          python -c "import requests, yaml; print('deps ok')"
+
+      - name: Python 语法（全部 bin/*.py 可编译）
+        run: |
+          python -c "
+          import ast, pathlib, sys
+          bad = 0
+          for p in sorted(pathlib.Path('bin').rglob('*.py')):
+              try:
+                  ast.parse(p.read_text(encoding='utf-8'))
+              except SyntaxError as e:
+                  print(f'!! {p}: {e}')
+                  bad += 1
+          sys.exit(1 if bad else 0)
+          "
+
+      - name: 关键模块能 import（vkcore 是路径探测核心）
+        run: |
+          python -c "
+          import sys; sys.path.insert(0, 'bin')
+          import vkcore
+          print('vkcore ok, CORE =', vkcore.CORE)
+          "
+
+      - name: .bat 陷阱检查（lint_bat.py）
+        run: python bin\lint_bat.py
+
+      - name: 敏感文件不该进仓库
+        shell: pwsh
+        run: |
+          $forbidden = @('10_backup', 'profiles/nodes_', 'profiles/vpnkit.yaml',
+                         'bin/misc', '11_dshpurge', '*.pem', '*.key',
+                         'hosts.bak', 'Local State')
+          $tracked = git ls-files
+          $hits = @()
+          foreach ($f in $tracked) {
+            foreach ($pat in $forbidden) {
+              if ($f -like $pat -or $f -match ([regex]::Escape($pat))) { $hits += "$f  (matched $pat)" }
+            }
+          }
+          if ($hits) { Write-Host $hits; exit 1 }
+          Write-Host 'clean ✓'
