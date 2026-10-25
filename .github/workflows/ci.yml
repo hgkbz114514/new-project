@@ -22,16 +22,19 @@ jobs:
           python -c "import requests, yaml; print('deps ok')"
 
       - name: Python 语法（全部 bin/*.py 可编译）
+        # 只检查 git 追踪的文件 —— 本机 bin/_archive、bin/misc 里的历史实验
+        # 脚本可能带 BOM 或旧语法，但它们不进仓库，CI 不用管
         run: |
           python -c "
-          import ast, pathlib, sys
+          import ast, pathlib, subprocess, sys
+          tracked = subprocess.run(['git','ls-files'], capture_output=True, text=True).stdout.split()
           bad = 0
-          for p in sorted(pathlib.Path('bin').rglob('*.py')):
-              try:
-                  ast.parse(p.read_text(encoding='utf-8'))
-              except SyntaxError as e:
-                  print(f'!! {p}: {e}')
-                  bad += 1
+          for f in tracked:
+              if f.endswith('.py'):
+                  try:
+                      ast.parse(pathlib.Path(f).read_text(encoding='utf-8'))
+                  except SyntaxError as e:
+                      print(f'!! {f}: {e}'); bad += 1
           sys.exit(1 if bad else 0)
           "
 
