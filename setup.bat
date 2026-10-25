@@ -31,7 +31,16 @@ if not defined PY (
     pause
     exit /b 1
 )
-for /f "delims=" %%P in ('"%PY%" -c "import sys;print(sys.version.split()[0])"') do set "PYVER=%%P"
+rem cmd's `for /f ... in ('"<quoted path>" -c "..."')` mangles nested quotes:
+rem the parser splits on the inner quote and you get
+rem   'C:\...\python.exe" -c "import' is not recognized as an internal command
+rem Writing to a temp file sidesteps the quoting entirely.
+set "PYVER=unknown"
+"%PY%" -c "import sys;print(sys.version.split()[0])" > "%TEMP%\vpnkit_pyver.txt" 2>nul
+if not errorlevel 1 (
+    set /p PYVER=<"%TEMP%\vpnkit_pyver.txt"
+    del "%TEMP%\vpnkit_pyver.txt" >nul 2>nul
+)
 echo   [1/4] Python %PYVER%  ->  %PY%
 
 rem ---- 2. dependencies -------------------------------------------------
