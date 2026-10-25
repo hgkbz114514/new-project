@@ -35,12 +35,15 @@ rem cmd's `for /f ... in ('"<quoted path>" -c "..."')` mangles nested quotes:
 rem the parser splits on the inner quote and you get
 rem   'C:\...\python.exe" -c "import' is not recognized as an internal command
 rem Writing to a temp file sidesteps the quoting entirely.
+rem
+rem And `set /p VAR=<file` must NOT sit inside a parenthesised block: cmd binds
+rem the redirection when it parses the whole block, before the file is created,
+rem which fails with "The system cannot find the file specified" and leaves
+rem VAR empty. So the read below is a bare single-line `if`.
 set "PYVER=unknown"
 "%PY%" -c "import sys;print(sys.version.split()[0])" > "%TEMP%\vpnkit_pyver.txt" 2>nul
-if not errorlevel 1 (
-    set /p PYVER=<"%TEMP%\vpnkit_pyver.txt"
-    del "%TEMP%\vpnkit_pyver.txt" >nul 2>nul
-)
+if exist "%TEMP%\vpnkit_pyver.txt" set /p PYVER=<"%TEMP%\vpnkit_pyver.txt"
+del "%TEMP%\vpnkit_pyver.txt" >nul 2>nul
 echo   [1/4] Python %PYVER%  ->  %PY%
 
 rem ---- 2. dependencies -------------------------------------------------
