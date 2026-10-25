@@ -51,14 +51,17 @@ echo   [3/4] looking for verge-mihomo.exe ...
 "%PY%" "%~dp0bin\vpn.py" doctor
 if errorlevel 1 (
     echo.
-    echo   [!] No mihomo core found. vpnkit drives an EXISTING Clash Verge
-    echo       install rather than bundling a core of its own.
+    echo   [!] The check above failed. Fix whatever it flagged, then re-run.
     echo.
-    echo       Install Clash Verge Rev first, then re-run setup.bat:
-    echo         https://github.com/clash-verge-rev/clash-verge-rev/releases
+    echo       If the core was not found: vpnkit drives an EXISTING Clash
+    echo       Verge install rather than bundling a core of its own.
+    echo         Install: https://github.com/clash-verge-rev/clash-verge-rev/releases
+    echo         Or point at a core you already have:
+    echo           set VK_CORE=C:\path\to\verge-mihomo.exe
     echo.
-    echo       Already installed somewhere unusual? Point at it:
-    echo         set VK_CORE=C:\path\to\verge-mihomo.exe
+    echo       If dependencies were missing, this usually means pip could not
+    echo       reach PyPI. Behind the GFW, start your proxy first:
+    echo         set HTTPS_PROXY=http://127.0.0.1:7897
     echo.
     pause
     exit /b 1
