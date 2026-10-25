@@ -1,0 +1,92 @@
+@echo off
+rem vpnkit first-run installer. Pure ASCII by design (see vpnkit.bat).
+chcp 65001 >nul
+title vpnkit setup
+setlocal
+cd /d "%~dp0"
+
+echo.
+echo   ============================================================
+echo     vpnkit  setup
+echo   ============================================================
+echo.
+
+rem ---- 1. locate python -------------------------------------------------
+set "PY="
+for %%V in (313 312 311 310 39 38) do (
+    if not defined PY (
+        if exist "%LOCALAPPDATA%\Programs\Python\Python%%V\python.exe" (
+            set "PY=%LOCALAPPDATA%\Programs\Python\Python%%V\python.exe"
+        )
+    )
+)
+if not defined PY (
+    where python >nul 2>nul && set "PY=python"
+)
+if not defined PY (
+    echo   [X] Python 3.8+ not found.
+    echo       Get it from https://www.python.org/downloads/
+    echo       Tick "Add python.exe to PATH" during setup.
+    echo.
+    pause
+    exit /b 1
+)
+for /f "delims=" %%P in ('"%PY%" -c "import sys;print(sys.version.split()[0])"') do set "PYVER=%%P"
+echo   [1/4] Python %PYVER%  ->  %PY%
+
+rem ---- 2. dependencies -------------------------------------------------
+echo   [2/4] installing requests + pyyaml ...
+"%PY%" -m pip install --quiet --disable-pip-version-check requests pyyaml
+if errorlevel 1 (
+    echo   [X] pip install failed. Check your network / proxy.
+    echo       If you are behind the GFW, set a proxy first:
+    echo         set HTTPS_PROXY=http://127.0.0.1:7897
+    pause
+    exit /b 1
+)
+echo         ok
+
+rem ---- 3. locate the mihomo core ---------------------------------------
+echo   [3/4] looking for verge-mihomo.exe ...
+"%PY%" "%~dp0bin\vpn.py" doctor
+if errorlevel 1 (
+    echo.
+    echo   [!] No mihomo core found. vpnkit drives an EXISTING Clash Verge
+    echo       install rather than bundling a core of its own.
+    echo.
+    echo       Install Clash Verge Rev first, then re-run setup.bat:
+    echo         https://github.com/clash-verge-rev/clash-verge-rev/releases
+    echo.
+    echo       Already installed somewhere unusual? Point at it:
+    echo         set VK_CORE=C:\path\to\verge-mihomo.exe
+    echo.
+    pause
+    exit /b 1
+)
+
+rem ---- 4. first pipeline run -------------------------------------------
+echo   [4/4] first harvest + speed test (about 6 minutes) ...
+echo         This pulls public sources, TCP-probes them, runs a real
+echo         core to check who actually forwards traffic, then measures
+echo         throughput. Safe to Ctrl-C; nothing is written to the system.
+echo.
+"%PY%" "%~dp0bin\vk.py" all
+if errorlevel 1 (
+    echo.
+    echo   [!] pipeline failed. See 09_logs\ for details.
+    pause
+    exit /b 1
+)
+
+echo.
+echo   ============================================================
+echo     done. next:
+echo.
+echo       vpnkit.bat                ^<- menu, or
+echo       python bin\vpn.py start   ^<- start + enable system proxy
+echo.
+echo     to keep it alive across reboots:
+echo       python bin\vpn.py autostart
+echo   ============================================================
+echo.
+pause
