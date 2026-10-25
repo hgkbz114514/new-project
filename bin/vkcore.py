@@ -14,6 +14,7 @@ Clash Verge 的 resources 目录复制过来。找不到就返回 None，让调�
 """
 import os
 import string
+import sys
 from pathlib import Path
 
 BIN = Path(__file__).resolve().parent.parent / "bin"
@@ -131,6 +132,12 @@ CORE = find_core()
 
 
 if __name__ == "__main__":
+    # 直接命令行跑时，控制台代码页可能不是 UTF-8，中文会变乱码。
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
     print(f"内核     : {CORE}" + ("" if CORE.exists() else "  (未找到)"))
     geo = find_geo_dir()
     print(f"geo 目录 : {geo if geo else '(未找到)'}")

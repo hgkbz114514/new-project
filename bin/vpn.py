@@ -553,14 +553,15 @@ def refresh():
 def doctor():
     """体检：内核在哪、配置能不能被吃下、端口是否空闲。
 
-    setup.bat 靠它的退出码判断要不要提示用户去装 Clash Verge。
+    setup.bat 靠它的退出码判断要不要提示用户去装 Clash Verge，所以
+    「配置缺失」不能算失败 —— 全新克隆时它必然缺失，那是正常的下一步，
+    不是环境问题。只有「内核找不到」和「依赖缺失」才是真失败。
     """
     ok = True
 
     print(f"项目根   : {ROOT}")
-    print(f"配置     : {CONF}  " + ("存在" if CONF.exists() else "缺失（先跑 vk.py all）"))
-    if not CONF.exists():
-        ok = False
+    has_conf = CONF.exists()
+    print(f"配置     : {CONF}  " + ("存在" if has_conf else "还没有（跑完 vk.py all 就有了）"))
 
     print(f"内核     : {MIHOMO}")
     if MIHOMO.exists():
@@ -587,14 +588,20 @@ def doctor():
 
     for p in (MIXED, CTRL):
         busy = port_listening(p)
-        print(f"端口 {p:<5}: " + ("占用（内核可能已在跑）" if busy else "空闲"))
+        print(f"端口 {p:<5}: " + ("占用（内核已在跑，正常）" if busy else "空闲"))
     pid = running_pid()
     if pid:
         print(f"内核进程 : 运行中 pid={pid}")
 
     print()
-    print("体检通过 —— 可以 python bin\\vpn.py start" if ok else "体检未通过，按上面提示处理")
-    return 0 if ok else 1
+    if not ok:
+        print("体检未通过，按上面提示处理")
+        return 1
+    if not has_conf:
+        print("环境就绪 —— 下一步跑 python bin\\vk.py all 生成配置（约 6 分钟）")
+    else:
+        print("体检通过 —— 可以 python bin\\vpn.py start")
+    return 0
 
 
 def main():
