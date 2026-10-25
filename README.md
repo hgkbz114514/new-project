@@ -100,6 +100,14 @@ python bin\make_shortcuts.py    # 在桌面建「控制台」和「秒开」两�
 python bin\make_icon.py         # 想换图标就重新生成 vpnkit.ico
 ```
 
+改过 `.bat` 之后跑一下这个静态检查（`cmd.exe` 有几个专坑批处理的语法陷阱，
+这个脚本会把它们全抓出来，退出码非 0 就是有问题）：
+
+```powershell
+python bin\lint_bat.py          # 检查仓库里所有 .bat
+python bin\lint_bat.py 某个目录   # 也可以只查指定目录
+```
+
 ### 路径探测
 
 内核和 geo 数据都不写死路径。`bin/vkcore.py` 按下面顺序找：
@@ -446,6 +454,25 @@ Get-Content <你的安装目录>\09_logs\subserver.console.log -Tail 20
 cmd 真去执行 `更新）` 这个"命令"。`chcp 65001` 救不了，错位在定位行时已经发生。
 
 现在 `vpnkit.bat` 只有十几行纯 ASCII，菜单正文全在 `bin\menu.py`。
+
+> 同一个家族还剩两个更阴的坑，都在 `setup.bat` 上真实踩过：
+>
+> - **`echo ... -> ...` 里的 `>` 是重定向符**。原作者写
+>   `echo   [1/4] Python %PYVER%  ->  %PY%`，cmd 实际执行的是
+>   `echo   [1/4] Python 3.13.15  - 1>"C:\...\Python313\python.exe"`，
+>   于是报 `The process cannot access the file because it is being used by
+>   another process`，那一行永远打不出来，**并且有把正在运行的 python.exe
+>   截断的风险**。`echo` 里要么别写 `>` `<`，要么写成 `^>` `^<`。
+> - **`set /p VAR=<file` 不能写在括号块里**。cmd 在解析整个 `if (...)` 块时
+>   就把重定向绑定了，那时文件还没生成 → `The system cannot find the file
+>   specified`，`VAR` 留空。要么用单行 `if exist X set /p VAR=<X`，
+>   要么先 `call :label` 出去。
+> - **`for /f "delims=" %%P in ('"C:\a b\py.exe" -c "..."')` 引号嵌套**。
+>   cmd 把 `in ('...')` 交给 `cmd /c` 执行，内层再出现成对引号就在中途断开，
+>   报 `'C:\...\python.exe" -c "import' 不是内部或外部命令`。
+>   改成先重定向到临时文件、再 `set /p` 读回来。
+
+这三类坑现在由 `python bin\lint_bat.py` 静态扫描（见上文「常用命令」）。
 
 **桌面图标丢了 / 想重建快捷方式**
 
