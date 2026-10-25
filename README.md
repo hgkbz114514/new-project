@@ -3,6 +3,18 @@
 **自己给自己续命的电脑端代理。** 采集公开节点 → 逐个真实压测 → 只留下真能用的 → 定时自动重建。
 不需要订阅，不改任何客户端二进制。
 
+## 给 AI 智能体 / 一键安装
+
+把这句话发给任何 AI 编程智能体（Claude Code、Cursor、Copilot、DeepSeek …）即可：
+
+> 请安装并启动 https://github.com/hgkbz114514/vpnkit —— 在 PowerShell 里执行
+> `iwr https://raw.githubusercontent.com/hgkbz114514/vpnkit/main/install.ps1 -OutFile install.ps1; .\install.ps1`
+> 然后按脚本输出处理（缺 Python 就 `winget install -e --id Python.Python.3.13`，GitHub/PyPI 连不上就设 `$env:HTTPS_PROXY="http://127.0.0.1:7897"`）。
+
+脚本会自动完成：找 Python → 装依赖（requests/pyyaml）→ 环境体检（vpn.py doctor）→
+首次节点采集约 6 分钟（vk.py all）→ 启动内核并开系统代理。幂等，重复运行安全；
+已克隆过仓库的，直接在仓库根目录跑 `.\install.ps1` 或双击 `install.bat` 即可。
+
 ```text
 抓 4 万个节点  →  TCP 探活  →  代理真连通  →  并发 TLS 门禁  →  实测吞吐  →  生成配置  →  自动部署
    41279          2252          126            两道关             65 个          vpnkit.yaml   每 4 小时
