@@ -44,7 +44,9 @@ set "PYVER=unknown"
 "%PY%" -c "import sys;print(sys.version.split()[0])" > "%TEMP%\vpnkit_pyver.txt" 2>nul
 if exist "%TEMP%\vpnkit_pyver.txt" set /p PYVER=<"%TEMP%\vpnkit_pyver.txt"
 del "%TEMP%\vpnkit_pyver.txt" >nul 2>nul
-echo   [1/4] Python %PYVER%  ->  %PY%
+rem `->` here would be parsed as `- 1> <target>` redirect and clobber a running
+rem python.exe. Never put a bare > or < inside echo.
+echo   [1/4] Python %PYVER%   at  %PY%
 
 rem ---- 2. dependencies -------------------------------------------------
 echo   [2/4] installing requests + pyyaml ...
