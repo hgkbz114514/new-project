@@ -7,6 +7,8 @@ vpnkit :: 节点体检器 (第一轮 TCP 连通筛选)
 import json, socket, sys, time, concurrent.futures as cf
 from pathlib import Path
 
+from vkwrite import safe_write
+
 ROOT = Path(__file__).resolve().parent.parent
 IN = ROOT / "profiles" / "nodes_raw.json"
 OUT = ROOT / "profiles" / "nodes_alive.json"
@@ -61,7 +63,8 @@ def main():
                 log(f"  进度 {done}/{len(nodes)}  活 {len(alive)}  ({time.time()-t0:.0f}s)")
 
     alive.sort(key=lambda x: x["tcp_rtt"])
-    OUT.write_text(json.dumps(alive, ensure_ascii=False, indent=1), encoding="utf-8")
+    safe_write(OUT, json.dumps(alive, ensure_ascii=False, indent=1),
+            min_items=5)
 
     by_type = {}
     for p in alive:

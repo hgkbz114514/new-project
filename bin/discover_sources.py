@@ -4,9 +4,12 @@ vpnkit :: 订阅源自愈发现器
 把一大批候选源全部试一遍，只把「200 且真的抠得出节点」的写回 sources_live.txt
 harvest.py 会同时读 sources.txt + sources_live.txt —— 源失效自动被淘汰，新源自动进池
 """
-import sys, time, concurrent.futures as cf
+import sys
+import time
+import concurrent.futures as cf
 from pathlib import Path
 
+from vkwrite import safe_write
 import requests
 import urllib3
 urllib3.disable_warnings()
@@ -63,7 +66,8 @@ def main():
                 log(f"  --  {url[:88]}  {err}")
 
     live.sort(reverse=True)
-    OUT.write_text("\n".join(u for _, u in live) + "\n", encoding="utf-8")
+    safe_write(OUT, "\n".join(u for _, u in live) + "\n",
+               min_items=5, kind="lines", force=True)
     log(f"存活源 {len(live)}/{len(urls)}（{dead} 死），总节点 {sum(n for n, _ in live)}")
     log(f"已写回 {OUT}")
 

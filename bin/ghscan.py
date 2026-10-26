@@ -20,6 +20,7 @@ index and delay, which change on every rebuild, so they are useless as keys).
 Usage: python ghscan.py [--top 70] [--threads 16]
 """
 import json
+from vkwrite import safe_write
 import subprocess
 import sys
 import tempfile
@@ -199,8 +200,9 @@ def main():
             res = list(ex.map(work, enumerate(proxies)))
 
         confirmed = [f"{p.get('server')}:{p.get('port')}" for p, ok, _, _ in res if ok]
-        (PROF / "github_ok.json").write_text(
-            json.dumps(confirmed, ensure_ascii=False, indent=1), encoding="utf-8")
+        safe_write(PROF / "github_ok.json",
+                   json.dumps(confirmed, ensure_ascii=False, indent=1),
+                   min_items=3, kind="lines")
 
         n_ok = len(confirmed)
         log(f"=== {time.time()-t0:.0f}s  github reachable {n_ok}/{len(proxies)}")

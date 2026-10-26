@@ -9,6 +9,8 @@ vpnkit :: 真实可用性验证 v2
 import json, os, subprocess, sys, time
 from pathlib import Path
 
+from vkwrite import safe_write
+
 import requests
 import urllib3
 import yaml
@@ -217,7 +219,8 @@ def main():
     log("临时内核已停止")
 
     survivors.sort(key=lambda x: x["delay"])
-    OUT.write_text(json.dumps(survivors, ensure_ascii=False, indent=1), encoding="utf-8")
+    safe_write(OUT, json.dumps(survivors, ensure_ascii=False, indent=1),
+               min_items=5)
     by_type = {}
     for p in survivors:
         by_type[p["type"]] = by_type.get(p["type"], 0) + 1

@@ -6,6 +6,7 @@ delay 通只说明能转发 generate_204，这里真发请求看出口 IP / 国�
 """
 import json, os, subprocess, sys, time, re
 from pathlib import Path
+from vkwrite import safe_write
 
 import requests
 import urllib3
@@ -140,7 +141,8 @@ def main():
         pass
 
     verified.sort(key=lambda x: x["delay"])
-    OUT.write_text(json.dumps(verified, ensure_ascii=False, indent=1), encoding="utf-8")
+    safe_write(OUT, json.dumps(verified, ensure_ascii=False, indent=1),
+            min_items=5)
     cc = {}
     for p in verified:
         cc[p.get("cc") or "??"] = cc.get(p.get("cc") or "??", 0) + 1

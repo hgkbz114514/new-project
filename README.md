@@ -558,6 +558,16 @@ netstat -ano | Select-String ':179\d\d.*LISTENING'
   3 个节点超 1000 KB/s。想要稳定千兆只能自建（方案 B）。
 - 节点存活期短，兜底靠守护每 4 小时重采。守护有阈值门禁：
   新池子小于 `VK_MIN_NODES` 就保留旧配置，不会把可用配置刷成空。
+- **三层数据防线**（2026-10-26 事故后加固）：① 所有采集脚本用 `vkwrite.safe_write`
+  原子写入 + 劣化保护——新结果为空/过少时保留旧文件，失败的一轮永远不会覆掉好数据；
+  ② 守护每轮先探内核是否存活，VPN 关闭时整轮直接跳过，不再产出空文件；
+  ③ `egress_verify.py` 用"真实出口 IP ≠ 本机 IP"识别透明假节点——这类节点
+  TCP 通、测速飞快（因为根本没代理），延迟和吞吐探测都骗得过，只有查出口 IP 能识破。
+- **密钥完整性三道闸**：`speed_probe` 写盘前丢弃无 uuid/password 的行，
+  `build_config` 的 emit 循环与 `usable()` 再次拦截，`merge_pool` 在
+  verified 为空时回退 `nodes_final`/`nodes_overseas` 字段银行——任何一环
+  出问题都不会再把无密钥节点送进配置（mihomo 对整份配置做校验，
+  一个 `has unset fields: uuid` 就是全拒载）。
 - `chatgpt.com` / `claude.ai` 用脚本请求会返回 403，那是 Cloudflare 对非浏览器 UA 的例行拦截，
   真实浏览器里正常。
 - 系统代理只覆盖遵循 WinINET 的程序。要覆盖 Steam、部分游戏、UWP，开 Clash Verge 的 TUN 模式（需管理员）。

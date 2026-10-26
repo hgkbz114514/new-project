@@ -28,6 +28,8 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+CTRL_PORT = 9097  # build_config.py's external-controller; used by vpn_alive()
 BIN = ROOT / "bin"
 PROF = ROOT / "profiles"
 LOG = ROOT / "09_logs" / "guard.log"
@@ -86,9 +88,33 @@ def pool_size():
     return 0, None
 
 
+def vpn_alive():
+    """True when the local kernel answers on the control port.
+
+    2026-10-25/26 incident: the hourly task fired while the VPN was off.
+    Every source fetch timed out, the collectors wrote empty/partial files,
+    and the good pool got wrecked. Collectors are now degradation-guarded
+    (vkwrite.safe_write), but a round without a live kernel is pointless
+    anyway -- sources are fetched through the proxy -- so skip the whole
+    round early.
+    """
+    try:
+        import urllib.request
+        urllib.request.urlopen(
+            f"http://127.0.0.1:{CTRL_PORT}/version", timeout=4)
+        return True
+    except Exception:
+        return False
+
+
 def round_():
     log("=" * 56)
     log(f"round start  interval={INTERVAL_H}h  min_nodes={MIN_NODES}")
+
+    if not vpn_alive():
+        log("!! kernel not running (7897/9097 down) -- round skipped, "
+            "files untouched. Start with: python bin\\vpn.py start")
+        return False
 
     run("discover_sources.py", timeout=1200)
 
@@ -121,6 +147,14 @@ def round_():
     # actually move bytes, instead of low-TTFB nodes that stall mid-page.
     run("speed_probe.py", "--top", TOPN, "--bytes", "2000000",
         "--threads", "24", timeout=2400)
+
+    # Fake-node purge. A "transparent relay" passes TCP and moves bytes fast
+    # (because it never proxies -- it is a direct connection in disguise) but
+    # exits from a China IP. delay/throughput probes cannot see it; only a
+    # real egress-IP check can. Without this the pool fills with fakes that
+    # "look" like 600KB/s nodes (the 2026-10-26 outage).
+    run("egress_verify.py", "--top", TOPN, timeout=3600)
+
     run("ghscan.py", "--top", TOPN, "--threads", "16", timeout=2400)
 
     # Pin one stable exit for Claude. Without this the CLAUDE group would be

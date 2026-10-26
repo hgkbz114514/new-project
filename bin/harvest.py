@@ -6,6 +6,7 @@ vpnkit :: 节点池采集器
 """
 import base64, json, os, re, sys, time, hashlib, urllib.parse, concurrent.futures as cf
 from pathlib import Path
+from vkwrite import safe_write
 
 import requests
 import yaml
@@ -305,7 +306,8 @@ def harvest():
         p["name"] = f"{i:04d}-{p['type']}-{p['server']}:{p['port']}"
 
     OUT_RAW.parent.mkdir(parents=True, exist_ok=True)
-    OUT_RAW.write_text(json.dumps(uniq, ensure_ascii=False, indent=1), encoding="utf-8")
+    safe_write(OUT_RAW, json.dumps(uniq, ensure_ascii=False, indent=1),
+            min_items=50)
 
     by_type = {}
     for p in uniq:

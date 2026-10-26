@@ -21,6 +21,7 @@ Usage:
   python speed_probe.py [--top 40] [--bytes 1500000] [--threads 20]
 """
 import json
+from vkwrite import safe_write
 import subprocess
 import sys
 import tempfile
@@ -365,9 +366,27 @@ def main():
                             f"{note[:50]}")
 
         results.sort(key=lambda x: -x["kbps"])
+        # Secret-completeness self-check: this file is build_config's PRIMARY
+        # input. A row without its credential (uuid/password) poisons the
+        # whole config -- mihomo -t rejects everything with
+        # "has unset fields: uuid" (the 2026-10-26 outage). Drop such rows
+        # here so a stripped record can never reach the builder.
+        SECRET_REQ = {"vmess": "uuid", "vless": "uuid", "trojan": "uuid",
+                      "tuic": "uuid", "ss": "password"}
+        full, dropped = [], []
+        for r in results:
+            need = SECRET_REQ.get(r.get("type"))
+            if need and not r.get(need):
+                dropped.append(r.get("name", "?"))
+                continue
+            full.append(r)
+        if dropped:
+            log(f"  !! dropped {len(dropped)} secret-less rows "
+                f"(first: {', '.join(dropped[:5])})")
+        results = full
         out = PROF / "nodes_fast.json"
-        out.write_text(json.dumps(results, ensure_ascii=False, indent=1),
-                       encoding="utf-8")
+        safe_write(out, json.dumps(results, ensure_ascii=False, indent=1),
+                   min_items=5)
 
         broken = [r for r in results if not r.get("tls_ok")]
         if broken:

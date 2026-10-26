@@ -139,6 +139,7 @@ def main():
         run("build_config.py")               # 先出一版，给下面的探测提供节点名
         run("speed_probe.py", "--top", "150", "--bytes", "2000000",
             "--threads", "24", timeout=1800)  # 真并行吞吐实测
+        run("egress_verify.py", "--top", "150", timeout=3600)  # 剔除透明假节点
         run("ghscan.py", timeout=1800)        # github 专用组
         run("build_config.py")               # 按实测吞吐重排 + 分层分组
         deploy()
@@ -150,6 +151,7 @@ def main():
         run("build_config.py")
         run("speed_probe.py", "--top", "80", "--bytes", "1500000",
             "--threads", "20", timeout=900)
+        run("egress_verify.py", "--top", "80", timeout=3600)  # 剔除透明假节点
         run("ghscan.py", timeout=1800)
         run("build_config.py")
         deploy()
