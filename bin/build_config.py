@@ -57,7 +57,21 @@ def merge_pool():
     def key(n):
         return f"{n.get('server')}:{n.get('port')}"
 
-    vb = {key(n): n for n in ver}
+    # verified 可能是空的（守护轮被污染/还没跑到），这时退回最富的字段银行，
+    # 否则 pool 只剩 fast 的测速字段，节点 uuid/password 全丢，mihomo -t 直接拒载。
+    bank = list(ver)
+    for alt in ("nodes_final.json", "nodes_overseas.json"):
+        if len(bank) >= 10:
+            break
+        ap = ROOT / "profiles" / alt
+        try:
+            if ap.exists() and ap.stat().st_size > 10:
+                cand = json.loads(ap.read_text(encoding="utf-8"))
+                if len(cand) > len(bank):
+                    bank = cand
+        except Exception:
+            pass
+    vb = {key(n): n for n in bank}
     pool, seen = [], set()
     SPEED_FIELDS = ("server", "port", "type", "kbps", "bytes", "secs",
                     "speed_url", "tls_ok", "tls_code", "tls_note")
@@ -148,6 +162,12 @@ def main():
 
     proxies, names = [], []
     for i, n in enumerate(nodes):
+        # mihomo validates EVERY entry in proxies: never emit a node without its secret.
+        t0 = n.get('type')
+        if t0 in ('vmess', 'vless', 'trojan', 'tuic', 'anytls') and not n.get('uuid'):
+            continue
+        if t0 == 'ss' and not n.get('password'):
+            continue
         q = {k: v for k, v in n.items()
              if k not in ("tcp_rtt", "delay", "exit_ip", "country", "cc",
                           "isp", "https_ok", "yt_ok", "probe", "resolved_ip",
@@ -172,6 +192,8 @@ def main():
     # 按地区切分出子组
     groups_by_cc = {}
     for i, n in enumerate(nodes):
+        if i >= len(names):
+            continue
         cc = n.get("exit_cc") or n.get("cc") or "OT"
         groups_by_cc.setdefault(cc, []).append(names[i])
 

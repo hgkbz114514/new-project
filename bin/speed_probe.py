@@ -295,9 +295,12 @@ def main():
                 kbps, size, secs = curl_speed(port, url, budget)
             else:
                 kbps, size, secs = 0.0, 0, 0.0
-            rec = {k: p.get(k) for k in ("server", "port", "type", "name")
-                   if p.get(k) is not None}
-            rec.update({"name": p["name"], "kbps": kbps, "bytes": size,
+            # Carry the FULL proxy record through (uuid/password/cipher/…).
+            # This file is the primary input for build_config's merge_pool, so
+            # dropping fields here silently strips secrets from every node and
+            # the generated config fails `-t` with "has unset fields: uuid".
+            rec = {k: v for k, v in p.items() if k != "probe"}
+            rec.update({"kbps": kbps, "bytes": size,
                         "secs": round(secs, 1), "speed_url": url,
                         "tls_ok": tls_ok, "tls_code": tls_code,
                         "tls_note": tls_note})
